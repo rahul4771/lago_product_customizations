@@ -1,0 +1,875 @@
+import React, { useState, useEffect, Fragment } from "react";
+import AbortController from "abort-controller";
+import Link from 'next/link';
+import { Card, EmptyState, Spinner, TextStyle, Toast, Frame } from '@shopify/polaris';
+import ApiHelper from "../../helpers/api-helper";
+import { API } from "../../constants/api";
+import { TOKEN, PREVIEW_URL } from "../../constants/common";
+import IconView from "../../images/icon_view.png"
+
+const AllPurchaseOrders = (props) => {
+	localStorage.removeItem('customizationInfo');
+	localStorage.removeItem('preview');
+	localStorage.removeItem('existingPreview');
+	localStorage.removeItem('cartData');
+	localStorage.removeItem('customer');
+  const [allPurchaseOrders, setAllPurchaseOrders] = useState([]);
+  const [artwork, setArtwork] = useState([]);
+  const [salesReps, setSalesReps] = useState([]);
+  const [next, setNext] = useState("");
+  const [previous, setPrevious] = useState("");
+  const [searchString, setSearchString] = useState("");
+  const [searchStringComplete, setSearchStringComplete] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [pageCount, setPageCount] = useState(0);
+  const [orderCount, setOrderCount] = useState(0);
+  const [error, setError] = useState(false);
+  const [errorMesage, setErrorMessage] = useState(false);
+  let setSignal = null;
+  let controller = null;
+  const eventKeyCodes = {
+      enter: 13,
+  }
+	const patternName = /[(@!\$%\^\&*\)\(+=._]{1,}/;
+
+  useEffect(() => {
+      try {
+        if (patternName.test(searchStringComplete)) {
+          setErrorMessage("Search word cannot contain special characters");
+          setError(true);
+          setLoading(false);
+        } else {
+          setError(false);
+          controller = new AbortController();
+          setSignal = controller.signal;
+          getAllPurchaseOrders(null, null, setSignal);
+          return () => {
+            if (setSignal) {
+              controller.abort();
+            }
+          }
+        }
+      } catch (e) {
+        console.log(e);
+      }
+   
+  }, [searchStringComplete]);
+
+  
+  const getAllPurchaseOrders = async (cursor = null, value = null, signal = null) => {
+
+    if (searchString.includes("\\") || searchString.includes("\"")) {
+      setErrorMessage("Invalid keyword");
+      setError(true);
+      return false;
+    }
+    setError(false);
+    let url = API.puchaseOrder;
+    if (cursor != null && value != null || searchString != "") {
+      url += "?";
+      if (searchString != "") {
+        url += "query=" + searchString.replace("#", "%23");
+        if (cursor != null && value != null) {
+          url += "&" + cursor + "=" + value;
+        } else {
+          setPageCount(0);
+        }
+      } else {
+        url += cursor + "=" + value;
+      }
+    }
+    if (cursor == "previous") {
+      setPageCount((pageCount) => (pageCount-1));
+    }
+    if (cursor == "next") {
+      setPageCount((pageCount) => (pageCount+1));
+    }
+    setLoading(true);
+    const purchaseOrders = await ApiHelper.get(url, signal);
+    if (purchaseOrders && purchaseOrders.message == "success") {
+      setOrderCount(purchaseOrders.body.purchase_orders.length);
+      setAllPurchaseOrders(purchaseOrders.body.purchase_orders);
+      setArtwork(purchaseOrders.body.artwork);
+      setSalesReps(purchaseOrders.body.sales_reps);
+      setNext(purchaseOrders.body.next_cursor);
+      setPrevious(purchaseOrders.body.previous_cursor);
+      setLoading(false);
+    }
+
+    if(purchaseOrders && purchaseOrders.message == "error") {
+      setOrderCount(0);
+      setAllPurchaseOrders([]);
+      setArtwork([]);
+      setSalesReps([]);
+      setLoading(false);
+      setNext("");
+      setPrevious("");
+      setLoading(false);
+      setError(true);
+      setErrorMessage("Failed to get Orders");
+    }
+    
+    
+  };
+
+  return (
+    <>
+      <div className="app-root">
+        <style jsx>{`
+   .app-root {  --p-background: rgba(246, 246, 247, 1);
+    --p-background-hovered: rgba(241, 242, 243, 1);
+    --p-background-pressed: rgba(237, 238, 239, 1);
+    --p-background-selected: rgba(237, 238, 239, 1);
+    --p-surface: rgba(255, 255, 255, 1);
+    --p-surface-neutral: rgba(228, 229, 231, 1);
+    --p-surface-neutral-hovered: rgba(219, 221, 223, 1);
+    --p-surface-neutral-pressed: rgba(201, 204, 208, 1);
+    --p-surface-neutral-disabled: rgba(241, 242, 243, 1);
+    --p-surface-neutral-subdued: rgba(246, 246, 247, 1);
+    --p-surface-subdued: rgba(250, 251, 251, 1);
+    --p-surface-disabled: rgba(250, 251, 251, 1);
+    --p-surface-hovered: rgba(246, 246, 247, 1);
+    --p-surface-pressed: rgba(241, 242, 243, 1);
+    --p-surface-depressed: rgba(237, 238, 239, 1);
+    --p-backdrop: rgba(0, 0, 0, 0.5);
+    --p-overlay: rgba(255, 255, 255, 0.5);
+    --p-shadow-from-dim-light: rgba(0, 0, 0, 0.2);
+    --p-shadow-from-ambient-light: rgba(23, 24, 24, 0.05);
+    --p-shadow-from-direct-light: rgba(0, 0, 0, 0.15);
+    --p-hint-from-direct-light: rgba(0, 0, 0, 0.15);
+    --p-on-surface-background: rgba(241, 242, 243, 1);
+    --p-border: rgba(140, 145, 150, 1);
+    --p-border-neutral-subdued: rgba(186, 191, 195, 1);
+    --p-border-hovered: rgba(153, 158, 164, 1);
+    --p-border-disabled: rgba(210, 213, 216, 1);
+    --p-border-subdued: rgba(201, 204, 207, 1);
+    --p-border-depressed: rgba(87, 89, 89, 1);
+    --p-border-shadow: rgba(174, 180, 185, 1);
+    --p-border-shadow-subdued: rgba(186, 191, 196, 1);
+    --p-divider: rgba(225, 227, 229, 1);
+    --p-icon: rgba(92, 95, 98, 1);
+    --p-icon-hovered: rgba(26, 28, 29, 1);
+    --p-icon-pressed: rgba(68, 71, 74, 1);
+    --p-icon-disabled: rgba(186, 190, 195, 1);
+    --p-icon-subdued: rgba(140, 145, 150, 1);
+    --p-text: rgba(32, 34, 35, 1);
+    --p-text-disabled: rgba(140, 145, 150, 1);
+    --p-text-subdued: rgba(109, 113, 117, 1);
+    --p-interactive: rgba(44, 110, 203, 1);
+    --p-interactive-disabled: rgba(189, 193, 204, 1);
+    --p-interactive-hovered: rgba(31, 81, 153, 1);
+    --p-interactive-pressed: rgba(16, 50, 98, 1);
+    --p-focused: rgba(69, 143, 255, 1);
+    --p-surface-selected: rgba(242, 247, 254, 1);
+    --p-surface-selected-hovered: rgba(237, 244, 254, 1);
+    --p-surface-selected-pressed: rgba(229, 239, 253, 1);
+    --p-icon-on-interactive: rgba(255, 255, 255, 1);
+    --p-text-on-interactive: rgba(255, 255, 255, 1);
+    --p-action-secondary: rgba(255, 255, 255, 1);
+    --p-action-secondary-disabled: rgba(255, 255, 255, 1);
+    --p-action-secondary-hovered: rgba(246, 246, 247, 1);
+    --p-action-secondary-pressed: rgba(241, 242, 243, 1);
+    --p-action-secondary-depressed: rgba(109, 113, 117, 1);
+    --p-action-primary: #5c6ac4;
+    --p-action-primary-disabled: rgba(241, 241, 241, 1);
+    --p-action-primary-hovered: rgba(0, 110, 82, 1);
+    --p-action-primary-pressed: rgba(0, 94, 70, 1);
+    --p-action-primary-depressed: rgba(0, 61, 44, 1);
+    --p-icon-on-primary: rgba(255, 255, 255, 1);
+    --p-text-on-primary: rgba(255, 255, 255, 1);
+    --p-text-primary: rgba(0, 123, 92, 1);
+    --p-text-primary-hovered: rgba(0, 108, 80, 1);
+    --p-text-primary-pressed: rgba(0, 92, 68, 1);
+    --p-surface-primary-selected: rgba(241, 248, 245, 1);
+    --p-surface-primary-selected-hovered: rgba(179, 208, 195, 1);
+    --p-surface-primary-selected-pressed: rgba(162, 188, 176, 1);
+    --p-border-critical: rgba(253, 87, 73, 1);
+    --p-border-critical-subdued: rgba(224, 179, 178, 1);
+    --p-border-critical-disabled: rgba(255, 167, 163, 1);
+    --p-icon-critical: rgba(215, 44, 13, 1);
+    --p-surface-critical: rgba(254, 211, 209, 1);
+    --p-surface-critical-subdued: rgba(255, 244, 244, 1);
+    --p-surface-critical-subdued-hovered: rgba(255, 240, 240, 1);
+    --p-surface-critical-subdued-pressed: rgba(255, 233, 232, 1);
+    --p-surface-critical-subdued-depressed: rgba(254, 188, 185, 1);
+    --p-text-critical: rgba(215, 44, 13, 1);
+    --p-action-critical: rgba(216, 44, 13, 1);
+    --p-action-critical-disabled: rgba(241, 241, 241, 1);
+    --p-action-critical-hovered: rgba(188, 34, 0, 1);
+    --p-action-critical-pressed: rgba(162, 27, 0, 1);
+    --p-action-critical-depressed: rgba(108, 15, 0, 1);
+    --p-icon-on-critical: rgba(255, 255, 255, 1);
+    --p-text-on-critical: rgba(255, 255, 255, 1);
+    --p-interactive-critical: rgba(216, 44, 13, 1);
+    --p-interactive-critical-disabled: rgba(253, 147, 141, 1);
+    --p-interactive-critical-hovered: rgba(205, 41, 12, 1);
+    --p-interactive-critical-pressed: rgba(103, 15, 3, 1);
+    --p-border-warning: rgba(185, 137, 0, 1);
+    --p-border-warning-subdued: rgba(225, 184, 120, 1);
+    --p-icon-warning: rgba(185, 137, 0, 1);
+    --p-surface-warning: rgba(255, 215, 157, 1);
+    --p-surface-warning-subdued: rgba(255, 245, 234, 1);
+    --p-surface-warning-subdued-hovered: rgba(255, 242, 226, 1);
+    --p-surface-warning-subdued-pressed: rgba(255, 235, 211, 1);
+    --p-text-warning: rgba(145, 106, 0, 1);
+    --p-border-highlight: rgba(68, 157, 167, 1);
+    --p-border-highlight-subdued: rgba(152, 198, 205, 1);
+    --p-icon-highlight: rgba(0, 160, 172, 1);
+    --p-surface-highlight: rgba(164, 232, 242, 1);
+    --p-surface-highlight-subdued: rgba(235, 249, 252, 1);
+    --p-surface-highlight-subdued-hovered: rgba(228, 247, 250, 1);
+    --p-surface-highlight-subdued-pressed: rgba(213, 243, 248, 1);
+    --p-text-highlight: rgba(52, 124, 132, 1);
+    --p-border-success: rgba(0, 164, 124, 1);
+    --p-border-success-subdued: rgba(149, 201, 180, 1);
+    --p-icon-success: rgba(0, 127, 95, 1);
+    --p-surface-success: rgba(174, 233, 209, 1);
+    --p-surface-success-subdued: rgba(241, 248, 245, 1);
+    --p-surface-success-subdued-hovered: rgba(236, 246, 241, 1);
+    --p-surface-success-subdued-pressed: rgba(226, 241, 234, 1);
+    --p-text-success: rgba(0, 128, 96, 1);
+    --p-decorative-one-icon: rgba(126, 87, 0, 1);
+    --p-decorative-one-surface: rgba(255, 201, 107, 1);
+    --p-decorative-one-text: rgba(61, 40, 0, 1);
+    --p-decorative-two-icon: rgba(175, 41, 78, 1);
+    --p-decorative-two-surface: rgba(255, 196, 176, 1);
+    --p-decorative-two-text: rgba(73, 11, 28, 1);
+    --p-decorative-three-icon: rgba(0, 109, 65, 1);
+    --p-decorative-three-surface: rgba(146, 230, 181, 1);
+    --p-decorative-three-text: rgba(0, 47, 25, 1);
+    --p-decorative-four-icon: rgba(0, 106, 104, 1);
+    --p-decorative-four-surface: rgba(145, 224, 214, 1);
+    --p-decorative-four-text: rgba(0, 45, 45, 1);
+    --p-decorative-five-icon: rgba(174, 43, 76, 1);
+    --p-decorative-five-surface: rgba(253, 201, 208, 1);
+    --p-decorative-five-text: rgba(79, 14, 31, 1);
+    --p-border-radius-base: 0.4rem;
+    --p-border-radius-wide: 0.8rem;
+    --p-border-radius-full: 50%;
+    --p-card-shadow: 0px 0px 5px var(--p-shadow-from-ambient-light),
+      0px 1px 2px var(--p-shadow-from-direct-light);
+    --p-popover-shadow: -1px 0px 20px var(--p-shadow-from-ambient-light),
+      0px 1px 5px var(--p-shadow-from-direct-light);
+    --p-modal-shadow: 0px 26px 80px var(--p-shadow-from-dim-light),
+      0px 0px 1px var(--p-shadow-from-dim-light);
+    --p-top-bar-shadow: 0 2px 2px -1px var(--p-shadow-from-direct-light);
+    --p-button-drop-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+    --p-button-inner-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    --p-button-pressed-inner-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.15);
+    --p-override-none: none;
+    --p-override-transparent: transparent;
+    --p-override-one: 1;
+    --p-override-visible: visible;
+    --p-override-zero: 0;
+    --p-override-loading-z-index: 514;
+    --p-button-font-weight: 500;
+    --p-non-null-content: '';
+    --p-choice-size: 2rem;
+    --p-icon-size: 1rem;
+    --p-choice-margin: 0.1rem;
+    --p-control-border-width: 0.2rem;
+    --p-banner-border-default: inset 0 0.1rem 0 0
+        var(--p-border-neutral-subdued),
+      inset 0 0 0 0.1rem var(--p-border-neutral-subdued);
+    --p-banner-border-success: inset 0 0.1rem 0 0
+        var(--p-border-success-subdued),
+      inset 0 0 0 0.1rem var(--p-border-success-subdued);
+    --p-banner-border-highlight: inset 0 0.1rem 0 0
+        var(--p-border-highlight-subdued),
+      inset 0 0 0 0.1rem var(--p-border-highlight-subdued);
+    --p-banner-border-warning: inset 0 0.1rem 0 0
+        var(--p-border-warning-subdued),
+      inset 0 0 0 0.1rem var(--p-border-warning-subdued);
+    --p-banner-border-critical: inset 0 0.1rem 0 0
+        var(--p-border-critical-subdued),
+      inset 0 0 0 0.1rem var(--p-border-critical-subdued);
+    --p-badge-mix-blend-mode: luminosity;
+    --p-thin-border-subdued: 0.1rem solid var(--p-border-subdued);
+    --p-text-field-spinner-offset: 0.2rem;
+    --p-text-field-focus-ring-offset: -0.4rem;
+    --p-text-field-focus-ring-border-radius: 0.7rem;
+    --p-button-group-item-spacing: -0.1rem;
+    --p-duration-1-0-0: 100ms;
+    --p-duration-1-5-0: 150ms;
+    --p-ease-in: cubic-bezier(0.5, 0.1, 1, 1);
+    --p-ease: cubic-bezier(0.4, 0.22, 0.28, 1);
+    --p-range-slider-thumb-size-base: 1.6rem;
+    --p-range-slider-thumb-size-active: 2.4rem;
+    --p-range-slider-thumb-scale: 1.5;
+    --p-badge-font-weight: 400;
+    --p-frame-offset: 0px;
+    
+}
+    `}
+        </style>
+        <div
+          className="Polaris-Tabs__Panel"
+          id="all-pos"
+          role="tabpanel"
+          aria-labelledby="all-pos"
+          tabIndex="-1"
+        >
+          <div className="Polaris-Card__Section">
+            <div>
+              <div className="display-text">
+                <div className="one-half text-left">
+                  <p className="Polaris-DisplayText Polaris-DisplayText--sizeLarge">
+                    Purchase Orders
+                  </p>
+                </div>
+                <div className="one-half text-right">
+                  <Link href={{ pathname: "/", query: { tab: "create-PO", page: "create" } }}>
+                    <button
+                      className="Polaris-Button Polaris-Button--primary"
+                      type="button"
+                    >
+                      <span className="Polaris-Button__Content">
+                        <span className="Polaris-Button__Text">
+                          <TextStyle variation="strong" preferredPosition="above">Create PO</TextStyle>
+                        </span>
+                      </span>
+                    </button>
+                  </Link>
+                </div>
+              </div>
+              <div id="PolarisPortalsContainer"></div>
+            </div>
+            <div className="Polaris-Layout">
+              <div className="Polaris-Layout__Section">
+                <div>
+                  <div className="Polaris-Card">
+                    <div className="Polaris-Card__Section">
+                      <div>
+                        <div
+                          aria-expanded="false"
+                          aria-owns="PolarisComboBox2"
+                          aria-controls="PolarisComboBox2"
+                          aria-haspopup="true"
+                          tabIndex="0"
+                          style={{ outline: "none" }}
+                        >
+                          <div>
+                            <div className="">
+                              <div className="Polaris-Labelled__LabelWrapper"></div>
+                              <div className="Polaris-Connected" style={{ marginBottom: "10px" }}>
+                                <div className="Polaris-Connected__Item Polaris-Connected__Item--primary">
+                                  <div className="Polaris-TextField">
+                                    <div onClick={() => {
+                                          try {
+                                            controller = new AbortController();
+                                            setSignal = controller.signal;
+                                            getAllPurchaseOrders(null, null, setSignal);
+                                          } catch (e) {
+                                              console.log(e);
+                                          }
+                                      }} style={{cursor: 'pointer'}}>
+                                      <div
+                                        className="Polaris-TextField__Prefix"
+                                        id="PolarisTextField2Prefix"
+                                      >
+                                        <span className="Polaris-Icon Polaris-Icon--colorBase Polaris-Icon--applyColor">
+                                          <svg
+                                            viewBox="0 0 20 20"
+                                            className="Polaris-Icon__Svg"
+                                            focusable="false"
+                                            aria-hidden="true"
+                                          >
+                                            <path d="M8 12a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm9.707 4.293l-4.82-4.82A5.968 5.968 0 0 0 14 8 6 6 0 0 0 2 8a6 6 0 0 0 6 6 5.968 5.968 0 0 0 3.473-1.113l4.82 4.82a.997.997 0 0 0 1.414 0 .999.999 0 0 0 0-1.414z"></path>
+                                          </svg>
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <input
+                                      id="PolarisTextField2"
+                                      role="combobox"
+                                      placeholder="Search"
+                                      autoComplete="off"
+                                      className="Polaris-TextField__Input"
+                                      aria-labelledby="PolarisTextField2Label PolarisTextField2Prefix"
+                                      aria-invalid="false"
+                                      aria-autocomplete="list"
+                                      value={searchString}
+                                      tabIndex="0"
+                                      aria-controls="Polarispopover2"
+                                      aria-owns="Polarispopover2"
+                                      aria-expanded="false"
+                                      onChange={(e) => setSearchString(e.target.value)}
+                                      onKeyDown={(e) => {if(e.keyCode == eventKeyCodes.enter){setSearchStringComplete(e.target.value)}}}
+                                      onBlur={(e) => {setSearchStringComplete(e.target.value)}}
+                                    />
+                                    <div className="Polaris-TextField__Backdrop"></div>
+                                  </div>
+                                </div>
+                                
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="">
+                            <div className="Polaris-DataTable__Navigation">
+                              <button
+                                className="Polaris-Button Polaris-Button--disabled Polaris-Button--plain Polaris-Button--iconOnly"
+                                aria-label="Scroll table left one column"
+                                type="button"
+                                disabled=""
+                              >
+                                <span className="Polaris-Button__Content">
+                                  <span className="Polaris-Button__Icon">
+                                    <span className="Polaris-Icon">
+                                      <svg
+                                        viewBox="0 0 20 20"
+                                        className="Polaris-Icon__Svg"
+                                        focusable="false"
+                                        aria-hidden="true"
+                                      >
+                                        <path d="M12 16a.997.997 0 0 1-.707-.293l-5-5a.999.999 0 0 1 0-1.414l5-5a.999.999 0 1 1 1.414 1.414L8.414 10l4.293 4.293A.999.999 0 0 1 12 16z"></path>
+                                      </svg>
+                                    </span>
+                                  </span>
+                                </span>
+                              </button>
+                              <button
+                                className="Polaris-Button Polaris-Button--plain Polaris-Button--iconOnly"
+                                aria-label="Scroll table right one column"
+                                type="button"
+                              >
+                                <span className="Polaris-Button__Content">
+                                  <span className="Polaris-Button__Icon">
+                                    <span className="Polaris-Icon">
+                                      <svg
+                                        viewBox="0 0 20 20"
+                                        className="Polaris-Icon__Svg"
+                                        focusable="false"
+                                        aria-hidden="true"
+                                      >
+                                        <path d="M8 16a.999.999 0 0 1-.707-1.707L11.586 10 7.293 5.707a.999.999 0 1 1 1.414-1.414l5 5a.999.999 0 0 1 0 1.414l-5 5A.997.997 0 0 1 8 16z"></path>
+                                      </svg>
+                                    </span>
+                                  </span>
+                                </span>
+                              </button>
+                            </div>
+                            {loading ? (
+                              <Spinner accessibilityLabel="Spinner example" size="large" />
+                            ) : allPurchaseOrders.length > 0 ? (
+                              <div className="Polaris-DataTable">
+                                <div className="Polaris-DataTable__ScrollContainer">
+
+                                  <table className="Polaris-DataTable__Table purchase__orders">
+                                    <thead>
+                                      <tr style={{ backgroundColor: "#d8d8d8" }}>
+                                        <th
+                                          data-polaris-header-cell="true"
+                                          className="Polaris-DataTable__Cell Polaris-DataTable__Cell--verticalAlignTop Polaris-DataTable__Cell--firstColumn Polaris-DataTable__Cell--header"
+                                          scope="col"
+                                        >
+                                          CUSTOMER
+                                        </th>
+                                        <th
+                                          data-polaris-header-cell="true"
+                                          className="Polaris-DataTable__Cell Polaris-DataTable__Cell--verticalAlignTop Polaris-DataTable__Cell--header"
+                                          scope="col"
+                                        >
+                                          PO#
+                                        </th>
+                                        <th
+                                          data-polaris-header-cell="true"
+                                          className="Polaris-DataTable__Cell Polaris-DataTable__Cell--verticalAlignTop Polaris-DataTable__Cell--header"
+                                          scope="col"
+                                        >
+                                          GARMENT
+                                        </th>
+                                        <th
+                                          data-polaris-header-cell="true"
+                                          className="Polaris-DataTable__Cell Polaris-DataTable__Cell--verticalAlignTop Polaris-DataTable__Cell--header"
+                                          scope="col"
+                                        >
+                                          SALES REP
+                                        </th>
+                                        <th
+                                          data-polaris-header-cell="true"
+                                          className="Polaris-DataTable__Cell Polaris-DataTable__Cell--verticalAlignTop Polaris-DataTable__Cell--header"
+                                          scope="col"
+                                        >
+                                          REQUIRED BY DATE
+                                        </th>
+                                        <th
+                                          data-polaris-header-cell="true"
+                                          className="Polaris-DataTable__Cell Polaris-DataTable__Cell--verticalAlignTop Polaris-DataTable__Cell--header"
+                                          scope="col"
+                                        >
+                                          STATUS
+                                        </th>
+                                        <th
+                                          data-polaris-header-cell="true"
+                                          className="Polaris-DataTable__Cell Polaris-DataTable__Cell--verticalAlignTop Polaris-DataTable__Cell--header"
+                                          scope="col"
+                                        ></th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {allPurchaseOrders.map((po, index) => {
+                                        let lineItems = po.line_items;
+                                        let n = 0;
+                                        let salesRepId = po?.orderSalesRepId ? po.orderSalesRepId : '';
+                                        let salesRepName = salesReps[salesRepId];
+                                        let status = "";
+                                        let approveFlag = false;
+                                        let requiredBy = null;
+                                        n++;
+
+                                        let rowClass = n == 1 ? "Polaris-DataTable__TableRow last_tr" : "Polaris-DataTable__TableRow last_tr";
+                                        return (
+                                          <tr className={rowClass} key={"o" + po.id }>
+                                            <th
+                                              className="Polaris-DataTable__Cell Polaris-DataTable__Cell--verticalAlignTop Polaris-DataTable__Cell--firstColumn"
+                                              scope="row"
+                                            >
+                                              {n == 1 ?
+                                                <a
+                                                  href={'https://lago-apparel-cad.myshopify.com/admin/customers/' + po.customer.id} target='_blank'>
+                                                  <TextStyle variation="strong">{po.customer.name}</TextStyle>
+                                                </a> : null}
+                                            </th>
+                                            <td className="Polaris-DataTable__Cell Polaris-DataTable__Cell--verticalAlignTop">
+                                              {n == 1 ?
+                                                <a
+                                                  href={'https://lago-apparel-cad.myshopify.com/admin/draft_orders/' + po.id} target='_blank'>
+                                                  <TextStyle variation="strong">{po.name}</TextStyle>
+                                                </a> : null}
+                                            </td>
+                                            <td className="Polaris-DataTable__Cell Polaris-DataTable__Cell--verticalAlignTop">
+                                            {
+                                              Object.keys(lineItems).length > 0 ? (
+                                                Object.keys(lineItems).map((key) => {
+                                                requiredBy = lineItems[key].required_by;
+                                                requiredBy = requiredBy.replace(/\//g, '-');
+                                                return (<Fragment key={"garment" + key}>
+                                                <span className="Polaris-Textstyle--variationStrong" style={{ textTransform: "capitalize" }}>
+                                                  <b> {lineItems[key].product_name} </b>
+                                                </span>
+                                                <br />
+                                                {
+                                                  lineItems[key].items.map((item, itemKey) => {
+                                                    let options = "Qty: " + item.quantity;
+                                                    item.options.map((option) => {
+                                                      options += ", " + option.name + ": " + option.value;
+                                                    })
+
+                                                    return (
+                                                      <Fragment key={"o" + po.id + "i" + itemKey}>
+                                                        {options}
+                                                        <br />
+                                                      </Fragment>
+                                                    )
+                                                  })
+                                                }
+
+                                                {
+                                                  lineItems[key].properties.filter(prop => prop.name.startsWith("Artwork-")).map((art, artKey) => {
+                                                    let orderArtwork = art.name;
+                                                    let artId = orderArtwork.split('-').pop();
+                                                    let artName = artwork[artId];
+                                                    return (
+                                                      <Fragment key={"o" + po.id + "a" + artKey}>
+                                                        {artKey == 0 ?
+                                                          <>
+                                                            <b> Assigned Artwork </b>
+                                                            <br />
+                                                          </>
+                                                          : null}
+                                                        SKU: {artId},
+                                                        Name:{" "}
+                                                        <span className="Polaris-TextStyle--variationPositive" style={{ textTransform: "capitalize" }}>
+                                                        {artName ? artName.substring(0, 15) : null}
+                                                        </span>
+                                                        <br />
+                                                      </Fragment>
+                                                    )
+                                                  })
+                                                }<a href={PREVIEW_URL + "/pages/all-preview?_ab=0&_fd=0&_sc=1&preview_theme_id=128477429919&orderId=" + po.id + "&productId=" + key + "&token=" + TOKEN}  target="_blank">View All</a><br /><br />
+                                                </Fragment>)
+                                              })
+                                              ) : null}
+                                              </td>
+                                            <td className="Polaris-DataTable__Cell Polaris-DataTable__Cell--verticalAlignTop">
+                                              {n == 1 ? <a href={'https://lago-apparel-cad.myshopify.com/admin/customers/' + salesRepId} target='_blank'>
+                                                <TextStyle variation="strong">{salesRepName}</TextStyle>
+                                              </a> : null}
+                                            </td>
+                                            <td className="Polaris-DataTable__Cell Polaris-DataTable__Cell--verticalAlignTop">
+                                              {n == 1 ? requiredBy : null}
+                                            </td>
+                                            <td className="Polaris-DataTable__Cell Polaris-DataTable__Cell--verticalAlignTop">
+                                            {
+                                              Object.keys(lineItems).length > 1 ? (
+                                                Object.keys(lineItems).map((key) => {
+                                                requiredBy = lineItems[key].required_by;
+                                                requiredBy = requiredBy.replace(/\//g, '-');
+                                                if (lineItems[key].status == "pendingAdminApproval") {
+                                                  status = "Awaiting Admin Approval";
+                                                  approveFlag = true;
+                                                } else if (lineItems[key].status == "pendingCustomerApproval") {
+                                                  status = "Awaiting Client Approval";
+                                                  approveFlag = true;
+                                                } else if (lineItems[key].status == "adminApproved") {
+                                                  status = "Admin Approved";
+                                                } else if (lineItems[key].status == "customerApproved") {
+                                                  status = "Client Approved";
+                                                }
+                                                let brCount = (Number(lineItems[key].items.length) + Number(lineItems[key].properties.filter(prop => prop.name.startsWith("Artwork-")).length))/2;
+                                                return (<Fragment key={"status" + key}>
+                                                <br />
+                                              {(() => {
+                                                let optionsBR = [];
+                                                for (let i = 1; i < brCount; i++) {
+                                                  optionsBR.push(<br />);
+                                                }
+                                                return optionsBR;
+                                              })()}
+                                              <span className={"Polaris-Tag " + (status == 'Admin Approved' ? 'admin--approved' : status == 'Client Approved' ? 'admin--approved' : 'awaiting--approval')}>
+                                                <span
+                                                  title=""
+                                                  className="Polaris-Tag__TagText"
+                                                >
+                                                  {status}
+                                                </span>
+                                              </span>
+                                              <br /><br /><br />
+                                              {(() => {
+                                                let optionsBR2 = [];
+                                                for (let i2 = 1; i2 <= Math.ceil(brCount); i2++) {
+                                                  optionsBR2.push(<br />);
+                                                }
+                                                return optionsBR2;
+                                              })()}
+                                              </Fragment>)
+                                              })
+                                                ) : (Object.keys(lineItems).map((key) => {
+                                                  requiredBy = lineItems[key].required_by;
+                                                  requiredBy = requiredBy.replace(/\//g, '-');
+                                                  if (lineItems[key].status == "pendingAdminApproval") {
+                                                    status = "Awaiting Admin Approval";
+                                                    approveFlag = true;
+                                                  } else if (lineItems[key].status == "pendingCustomerApproval") {
+                                                    status = "Awaiting Client Approval";
+                                                    approveFlag = true;
+                                                  } else if (lineItems[key].status == "adminApproved") {
+                                                    status = "Admin Approved";
+                                                  } else if (lineItems[key].status == "customerApproved") {
+                                                    status = "Client Approved";
+                                                  }
+                                                  return (<Fragment key={"status" + key}>
+                                                <span className={"Polaris-Tag " + (status == 'Admin Approved' ? 'admin--approved' : status == 'Client Approved' ? 'admin--approved' : 'awaiting--approval')}>
+                                                  <span
+                                                    title=""
+                                                    className="Polaris-Tag__TagText"
+                                                  >
+                                                    {status}
+                                                  </span>
+                                                </span>
+                                                </Fragment>)
+                                                }))}
+                                            </td>
+                                            <td className="Polaris-DataTable__Cell Polaris-DataTable__Cell--verticalAlignTop">
+                                              {n == 1 && approveFlag ? (
+                                                <Link href={{ pathname: "/", query: { tab: "create-PO", page: "poDetails", params: po.id } }}>
+                                                  <span className="Polaris-Icon" style={{ cursor: "pointer" }}>
+                                                    <svg
+                                                      xmlns="http://www.w3.org/2000/svg"
+                                                      width="20"
+                                                      height="20"
+                                                      viewBox="0 0 20 20"
+                                                    >
+                                                      <g
+                                                        fill="none"
+                                                        fillRule="evenodd"
+                                                      >
+                                                        <g fill="#212B36">
+                                                          <g>
+                                                            <path
+                                                              d="M18.878 1.085c-1.445-1.446-3.967-1.446-5.414 0l-11.17 11.17c-.108.108-.18.234-.228.368-.003.009-.012.015-.015.024l-2 6c-.12.359-.026.756.242 1.023.19.19.446.293.707.293.106 0 .212-.016.316-.051l6-2c.01-.003.015-.012.024-.015.134-.048.26-.12.367-.227L18.878 6.499C19.601 5.776 20 4.814 20 3.792c0-1.023-.399-1.984-1.122-2.707zm-1.414 4L17 5.549l-2.586-2.586.464-.464c.691-.691 1.895-.691 2.586 0 .346.346.536.805.536 1.293 0 .488-.19.947-.536 1.293zM3.437 14.814l1.712 1.712-2.568.856.856-2.568zM7 15.549l-2.586-2.586L13 4.377l2.586 2.586L7 15.549z"
+                                                              transform="translate(-1145 -345) translate(1145 345)"
+                                                            />
+                                                          </g>
+                                                        </g>
+                                                      </g>
+                                                    </svg>
+                                                  </span>
+                                                </Link>
+                                              ) : approveFlag == false ? (
+                                              <Link href={{ pathname: "/", query: { tab: "create-PO", page: "poDetails", params: po.id } }}>
+                                              <span className="Polaris-Icon" style={{ cursor: "pointer" }}>
+                                              <img
+																								src={IconView}
+																								alt="Right button"
+																							/>
+                                              </span>
+                                            </Link>) : null
+                                              }
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                                {previous == null && next == null ? null : (
+                                  <div className="Polaris-DataTable__Footer">
+                                    <nav aria-label="Pagination">
+                                      <div
+                                        className="Polaris-ButtonGroup"
+                                        data-buttongroup-segmented="false"
+                                      >
+                                        <div className={
+                                          'Polaris-ButtonGroup__Item ' +
+                                          (previous ? '' : 'Border_color')
+                                        }>
+                                          <a href="#" onClick={() => getAllPurchaseOrders("previous", previous)} className={
+                                            previous
+                                              ? ''
+                                              : 'Polaris-Button--disabled'
+                                          } >
+                                            <button
+                                              id="previousURL"
+                                              className={
+                                                'Polaris-Button Polaris-Button--outline Light_border Polaris-Button--iconOnly ' +
+                                                (previous
+                                                  ? ''
+                                                  : 'Polaris-Button--disabled')
+                                              }
+                                              type="button"
+                                              disabled={previous == null}
+                                            >
+                                              <span className="Polaris-Button__Content">
+                                                <span className="Polaris-Button__Icon">
+                                                  <span className="Polaris-Icon">
+                                                    <svg
+                                                      viewBox="0 0 20 20"
+                                                      className="Polaris-Icon__Svg"
+                                                      focusable="false"
+                                                      aria-hidden="true"
+                                                    >
+                                                      <path d="M12 16a.997.997 0 0 1-.707-.293l-5-5a.999.999 0 0 1 0-1.414l5-5a.999.999 0 1 1 1.414 1.414L8.414 10l4.293 4.293A.999.999 0 0 1 12 16z"></path>
+                                                    </svg>
+                                                  </span>
+                                                </span>
+                                              </span>
+                                            </button>
+                                          </a>
+                                        </div>
+
+                                        <div className={
+                                          'Polaris-ButtonGroup__Item ' +
+                                          (next ? '' : 'Border_color')
+                                        }>
+                                          <a href="#" onClick={() => getAllPurchaseOrders("next", next)} className={(next ? '' : "Polaris-Button--disabled")} >
+                                            <button
+                                              id="nextURL"
+                                              className={
+                                                'Polaris-Button Polaris-Button--outline Light_border Polaris-Button--iconOnly ' +
+                                                (next
+                                                  ? ''
+                                                  : 'Polaris-Button--disabled')
+                                              }
+                                              aria-label="Next"
+                                              type="button"
+                                              disabled={next == null}
+                                            >
+                                              <span className="Polaris-Button__Content">
+                                                <span className="Polaris-Button__Icon">
+                                                  <span className="Polaris-Icon">
+                                                    <svg
+                                                      viewBox="0 0 20 20"
+                                                      className="Polaris-Icon__Svg"
+                                                      focusable="false"
+                                                      aria-hidden="true"
+                                                    >
+                                                      <path d="M8 16a.999.999 0 0 1-.707-1.707L11.586 10 7.293 5.707a.999.999 0 1 1 1.414-1.414l5 5a.999.999 0 0 1 0 1.414l-5 5A.997.997 0 0 1 8 16z"></path>
+                                                    </svg>
+                                                  </span>
+                                                </span>
+                                              </span>
+                                            </button>
+                                          </a>
+                                        </div>
+
+                                      </div>
+                                    </nav>
+                                    <div id="PolarisPortalsContainer"></div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : searchStringComplete != "" ? (
+                              <div className="_1z7Ob">
+                                <div className="Polaris-Stack_32wu2 Polaris-Stack--vertical_uiuuj Polaris-Stack--alignmentCenter_1rtaw">
+                                  <div className="Polaris-Stack__Item_yiyol">
+                                    <img src="data:image/svg+xml,%3csvg width='60' height='60' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M41.87 24a17.87 17.87 0 11-35.74 0 17.87 17.87 0 0135.74 0zm-3.15 18.96a24 24 0 114.24-4.24L59.04 54.8a3 3 0 11-4.24 4.24L38.72 42.96z' fill='%238C9196'/%3e%3c/svg%3e" alt="Empty search results" draggable="false" />
+                                  </div>
+                                  <div className="Polaris-Stack__Item_yiyol">
+                                    <p className="Polaris-DisplayText_1u0t8 Polaris-DisplayText--sizeSmall_7647q">
+                                      No purchase orders found
+                                    </p>
+                                  </div>
+                                  <div className="Polaris-Stack__Item_yiyol">
+                                    <span className="Polaris-TextStyle--variationSubdued_1segu">
+                                      <p>Try changing the filters or search term</p>
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <Card sectioned>
+                                <EmptyState
+                                  heading="Create a purchase order to get started"
+                                  image="https://cdn.shopify.com/shopifycloud/web/assets/v1/ca2164e72f3221921e4cf1febe0571ae.svg"
+                                  fullWidth
+                                >
+                                  <p>
+                                    This is where you can manage and view the purchase order history.
+                                  </p>
+                                  <Link href={{ pathname: "/", query: { tab: "create-PO", page: "create" } }}>
+                                    <button
+                                      className="Polaris-Button Polaris-Button--primary"
+                                      type="button" style={{ marginTop: "25px" }}
+                                    >
+                                      <span className="Polaris-Button__Content">
+                                        <span className="Polaris-Button__Text">
+                                          <TextStyle variation="strong" preferredPosition="above">Create PO</TextStyle>
+                                        </span>
+                                      </span>
+                                    </button>
+                                  </Link>
+                                </EmptyState>
+                              </Card>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div id="PolarisPortalsContainer">
+                        <div data-portal-id="popover-Polarisportal1"></div>
+                      </div>
+                    </div>
+                  </div>
+                  {loading ? null : orderCount > 0 ?  (<div className="display-text">
+                        <div className="one-half text-left">
+                        <p className="Polaris-DisplayText Polaris-DisplayText--sizeExtraSmall"style={{ marginLeft: '7px' }}>
+                        Showing {pageCount*10+1} to {pageCount*10+orderCount} out of total orders
+                        </p>
+                        </div>
+                    </div>) : ''}
+                </div>
+              </div>
+            </div>
+            <div id="PolarisPortalsContainer"></div>
+          </div>
+        </div>
+      </div>
+      { error  ? (<Frame>
+        <Toast content={errorMesage} error onDismiss={() => {setError(false)}} />
+      </Frame>) : ''}
+    </>
+  );
+}
+
+export default AllPurchaseOrders;

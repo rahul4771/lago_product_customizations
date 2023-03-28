@@ -1,0 +1,49 @@
+
+
+    // const testFun = async () => {
+    //     const secret_name = "cmd_uirjs_enrollment";
+    //     let response;
+
+    //     const params = {
+    //         SecretId: secret_name,
+    //         VersionStage: "AWSCURRENT",
+    //     };
+    //     const command2 = new CancelRotateSecretCommand(params);
+    //     // console.log("command2",command2)
+        
+    //     try {
+    //         const data = await client.send(command2);
+    //         console.log("data",data)
+    //       } catch (error) {
+    //         console.log("error",error)
+    //       } finally {
+    //         // finally.
+    //       }
+
+
+    //     try {
+    //         response = await client.send(
+    //             new GetSecretValueCommand({
+    //                 SecretId: secret_name,
+    //                 VersionStage: "AWSCURRENT",
+    //             })
+    //         ).catch((error) => {
+    //             console.log("error.$$metadata",error)
+    //           })
+    //     } catch (error) {
+    //         // console.log("error.$$metadata",error)
+    //         // const { requestId, cfId, extendedRequestId } = error.$$metadata;
+    //         // console.log({ requestId, cfId, extendedRequestId });
+    //         // For a list of exceptions thrown, see
+    //         // https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
+    //         // throw error;
+    //     }
+    //     if(response){
+    //         const secret = response.SecretString;
+    //         console.log("secret",secret)
+    //     }
+    // }
+
+
+// import { SecretsManagerClient, GetSecretValueCommand, CancelRotateSecretCommand } from "@aws-sdk/client-secrets-manager";
+// const client = new SecretsManagerClient({ region: "us-east-1", });
